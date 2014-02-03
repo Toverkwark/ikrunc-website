@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>iKRUNC - Inducible Knockouts by RNA Utilizing Nuclease Cas9</title>
+	<meta charset="utf-8">
+	<link rel="stylesheet" href="style.css" type="text/css"></link>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
+	<script>
+		function alertsize(ID)
+  		{
+  			{
+				document.getElementById(ID).style.height = 0;
+			};
+			{			
+				pixels=document.getElementById(ID).contentWindow.document.body.scrollHeight;
+				document.getElementById(ID).style.height=pixels+"px";				
+			}
+			document.getElementById(ID).scrolling="no";
+		}
+	</script>
+</head>
+
+<body class="body">
+	<header class="mainheader">
+		<nav>
+			<ul>
+				<li><a href="sitefinder.html" target="maincontentframe">Sitefinder</a></li>
+				<li><a href="about.html" target="maincontentframe">About</a></li>
+			</ul>
+		</nav>
+	</header>
+	<iframe name="maincontentframe" id="maincontentframe" class="maincontentclass" src="sitefinder.html" width="100%" seamless onload="parent.alertsize('maincontentframe');"/>	
+</body>
+</html>
+
