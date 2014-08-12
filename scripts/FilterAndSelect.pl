@@ -74,6 +74,7 @@ $CDSLimit = $CDSSize - $CDSLimit if ($GeneOrientation == 0);
 open (IN, $InputFile) or die "ERROR in $ScriptName: Cannot open inputfile $InputFile\n";
 while (defined(my $Line = <IN>)) {
 	chomp($Line);
+	
 	#For every line, extract the necessary information
 	my @SAMValues = split( /\t/, $Line );
 	my $ProtospacerSequence = $SAMValues[9];
@@ -84,11 +85,12 @@ while (defined(my $Line = <IN>)) {
 		$ProtospacerSequence = reverse($ProtospacerSequence);
 	}
 	$Chromosome = $SAMValues[2];
+	#RefSeq file locations are zero based, but output of bowtie and therefore the locations in the qualities.4 files are 1-based, so correct for that.
 	my $Start = $SAMValues[3]-1;
 	my $End = $Start+23;
 	my $CutLocation;
 	if ($Orientation eq '+') {
-		$CutLocation = $End-5;
+		$CutLocation = $Start+18;
 	}
 	else {
 		$CutLocation = $Start+6;
@@ -106,70 +108,70 @@ while (defined(my $Line = <IN>)) {
 			$Degree=$Degree+1;
 		}
 	}
-	my $Name = $NumberOfIdentical3PrimeTargets . "(" . $NumberOfIdentical3PrimeTargetsNearExons . "):". $Degree . "MM:" . $ClosestRelatives . "(" . $ClosestRelativesNearExons . ")";
+	my $Label = $ProtospacerSequence . ": identical 3\\'12nt regions:" . $NumberOfIdentical3PrimeTargets . "(" . $NumberOfIdentical3PrimeTargetsNearExons . ") Closest off-target:". $Degree . " mismatches:" . $ClosestRelatives . "(" . $ClosestRelativesNearExons . ")";
 	
 	#The score of any protospacer will be determined as follows
 	#There will be one point added for every Degree, meaning the degree below that did not have relatives
 	#3 Points will be added for protospacers that do not have OTHER identical 3' targets
 	#2 Points will be added for protospacers that have 1 OTHER identical 3' target, which is not near Exons
 	#1 Points will be added for protospacers that have more than 1 OTHER identical 3' target unless any of them near Exons
-	#0.0001 points will be subtracted for the number of relatives in the closest degree
-	#0.01 points will be substracted for the number of relatives in the closest degree that are near Exons
-	my $ColorRed=0;
-	my $ColorGreen=0;
-	my $ColorBlue=1;	
+	#0.00000001 points will be subtracted for the number of relatives in the closest degree
+	#0.0001 points will be substracted for the number of relatives in the closest degree that are near Exons	
 	my $Score=$Degree;
 	$Score=$Score + 3 if ($NumberOfIdentical3PrimeTargets == 1);
 	$Score=$Score + 2 if ($NumberOfIdentical3PrimeTargets == 2 && $NumberOfIdentical3PrimeTargetsNearExons == 0);
 	$Score=$Score + 1 if ($NumberOfIdentical3PrimeTargets > 2 && $NumberOfIdentical3PrimeTargetsNearExons == 0);
-	$Score=$Score - (0.0001 * $ClosestRelatives);
-	$Score=$Score - (0.01 * $ClosestRelativesNearExons);
+	$Score=$Score - (0.00000001 * $ClosestRelatives);
+	$Score=$Score - (0.0001 * $ClosestRelativesNearExons);
 	
 	#Now, see if the protospacer is within the set criteria for CDS fraction or start codon neighbourhood
 	my $WithinStartCodonNeighbourHood = 0;
 	my $WithinChosenCDSFraction = 0;
 	my $StartCodon=$ProteinStart;
 	if(!$GeneOrientation) {
-		$StartCodon=$ProteinEnd
+		$StartCodon=$ProteinEnd;
 	}
+	#Check whether cut location is within start codon neighbourhood
 	if(abs($CutLocation - $StartCodon) <= $StartNeighbourhood) {
 		$WithinStartCodonNeighbourHood = 1;
 	}
-	
-	#Find what location in the CDS the cut location is
+	#Find what location in the CDS the cut location is and check whether the cut location is within coding sequence
 	my $CutLocationCDS=0;
+	my $CutWithinCodingSequence = 0;
 	for (my $Exon = 0;$Exon < $NumberOfExons; $Exon++) {
 		my $ExonStart= ($ExonStartSites[$Exon]);
 		my $ExonEnd = ($ExonEndSites[$Exon]); 
 	
 		#Check if the current exon has coding sequence. If it has, set StartSite and EndSite according to coordinates that fall within protein coding sequence
-		if($ProteinStart<$ExonEnd && $CutLocation>$ExonStart) {
+		if($ProteinStart<=$ExonEnd && $CutLocation>=$ExonStart) {
 			my $StartSite = ($ProteinStart > $ExonStart) ? $ProteinStart : $ExonStart;
 			my $EndSite = ($CutLocation < $ExonEnd) ? $CutLocation : $ExonEnd;
 			$CutLocationCDS = $CutLocationCDS + ($EndSite - $StartSite); 
 		}
+		if($CutLocation>=$ExonStart && $CutLocation < $ExonEnd) {
+			$CutWithinCodingSequence = 1;
+		}
 	}
 	if($GeneOrientation == 1) {
-		$WithinChosenCDSFraction = 1 if ($CutLocationCDS<$CDSLimit && $CutLocationCDS>0); 
+		$WithinChosenCDSFraction = 1 if ($CutLocationCDS<=$CDSLimit && $CutLocationCDS>0); 
 	}
 	else {
-		$WithinChosenCDSFraction = 1 if ($CutLocationCDS>$CDSLimit && $CutLocationCDS<$CDSSize); 
+		$WithinChosenCDSFraction = 1 if ($CutLocationCDS>=$CDSLimit && $CutLocationCDS<=$CDSSize); 
 	}
-	if ($WithinChosenCDSFraction || $WithinStartCodonNeighbourHood) {
-		$Protospacers{"$Chromosome\t$Start\t$End\t$Name\t$Score\t$Orientation\t$Start\t$End\t$ColorRed,$ColorGreen,$ColorBlue\n"} = $Score;
-		$ProtospacerSequences{"$Chromosome\t$Start\t$End\t$Name\t$Score\t$Orientation\t$Start\t$End\t$ColorRed,$ColorGreen,$ColorBlue\t$ProtospacerSequence\t$RefSeq"} = $Score;
+	
+	#Only write target site to output file if the cut site is either within the chosen CDS fraction or within the chosen start codon neighbourhood
+	if (($WithinChosenCDSFraction && $CutWithinCodingSequence) || $WithinStartCodonNeighbourHood) {
+		$ProtospacerSequences{"$RefSeq\t$Chromosome\t$Orientation\t$CutLocation\t$Score\t$ProtospacerSequence\t$NumberOfIdentical3PrimeTargets\t$NumberOfIdentical3PrimeTargetsNearExons\t$Degree\t$ClosestRelatives\t$ClosestRelativesNearExons\t$Label"} = $Score;
 	}
+}
+my $MaxNumberOfProtospacers = keys %ProtospacerSequences;
+#print "Max number of Protospacers:$MaxNumberOfProtospacers\n";
+#print "Select number of Protospacers:$SelectNumberOfProtospacers\n";
+if ($SelectNumberOfProtospacers>0) {
+	$MaxNumberOfProtospacers=$SelectNumberOfProtospacers;
 }
 
 my $NumberOfProtospacers = 0;
-foreach my $Protospacer (sort {$Protospacers{$b} <=> $Protospacers{$a}} keys %Protospacers) {
-	$NumberOfProtospacers++;
-	if ($SelectNumberOfProtospacers>0) {
-		last if ($NumberOfProtospacers >= $SelectNumberOfProtospacers);	
-	}
-}
-my $MaxNumberOfProtospacers = $NumberOfProtospacers;
-$NumberOfProtospacers = 0;
 foreach my $ProtospacerSequence (sort {$ProtospacerSequences{$b} <=> $ProtospacerSequences{$a}} keys %ProtospacerSequences) {
 	print OUTSEQ $ProtospacerSequence . "\t" . (($MaxNumberOfProtospacers - $NumberOfProtospacers) / $MaxNumberOfProtospacers) . "\n";
 	$NumberOfProtospacers++;
