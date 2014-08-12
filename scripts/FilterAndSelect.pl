@@ -3,11 +3,7 @@ use File::Basename;
 use warnings;
 use strict;
 
-<<<<<<< HEAD
 my $HomepagePrefix = "/home/NKI/b.evers/public_html/ikrunc/";
-=======
-my $HomepagePrefix = "/home/NKI/b.evers/public_html/sitefinder/";
->>>>>>> b97f9b87ea77355452f2bd17e163b8a45f62c36f
 my $ScriptName="FilterAndSelect.pl";
 my ($CDSSearchFraction, $StartNeighbourhood, $SelectNumberOfProtospacers, $Genome, $RefSeq, $RefSeqFile, %opts, %Protospacers, %ProtospacerSequences);
 
@@ -164,11 +160,7 @@ while (defined(my $Line = <IN>)) {
 	}
 	
 	#Only write target site to output file if the cut site is either within the chosen CDS fraction or within the chosen start codon neighbourhood
-<<<<<<< HEAD
 	if (($WithinChosenCDSFraction && $CutWithinCodingSequence) || $WithinStartCodonNeighbourHood) {
-=======
-	if ($WithinChosenCDSFraction || ($WithinStartCodonNeighbourHood && $CutWithinCodingSequence)) {
->>>>>>> b97f9b87ea77355452f2bd17e163b8a45f62c36f
 		$ProtospacerSequences{"$RefSeq\t$Chromosome\t$Orientation\t$CutLocation\t$Score\t$ProtospacerSequence\t$NumberOfIdentical3PrimeTargets\t$NumberOfIdentical3PrimeTargetsNearExons\t$Degree\t$ClosestRelatives\t$ClosestRelativesNearExons\t$Label"} = $Score;
 	}
 }
