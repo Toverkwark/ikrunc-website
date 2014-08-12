@@ -9,7 +9,11 @@ use strict;
 #An html file containing a table to all the CRISPR sites in the svg file is also created
 #The whole image is created such that it is 1500 pixels wide. This can best be adjusted by using the viewBox argument in the svg header in the header file
 
+<<<<<<< HEAD
 my $HomepagePrefix = "/home/NKI/b.evers/public_html/ikrunc/";
+=======
+my $HomepagePrefix = "/home/NKI/b.evers/public_html/sitefinder/";
+>>>>>>> b97f9b87ea77355452f2bd17e163b8a45f62c36f
 my $HeaderFile = $HomepagePrefix . "scripts/header";
 my $FooterFile = $HomepagePrefix . "scripts/footer";
 my $ScriptName="ReportTargetSites.pl";
